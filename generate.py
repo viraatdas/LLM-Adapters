@@ -1,11 +1,13 @@
 import os
 import sys
 
-import fire
 import gradio as gr
 import torch
 import transformers
-from peft import PeftModel
+from package_external.LLM_Adapters.peft.src.peft import ( 
+    PeftModel
+)
+
 from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
 
 if torch.cuda.is_available():
@@ -186,6 +188,3 @@ def generate_prompt(instruction, input=None):
 ### Response:
 """  # noqa: E501
 
-
-if __name__ == "__main__":
-    fire.Fire(main)

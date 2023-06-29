@@ -2,7 +2,6 @@ import os
 import sys
 from typing import List
 
-import fire
 import torch
 import transformers
 from datasets import load_dataset
@@ -13,14 +12,21 @@ Unused imports:
 import torch.nn as nn
 import bitsandbytes as bnb
 """
-from peft import (  # noqa: E402
+from package_external.LLM_Adapters.peft.src.peft import (  # noqa: E402
     LoraConfig,
-    BottleneckConfig,
-    get_peft_model,
+    BottleneckConfig
+)  
+
+from package_external.LLM_Adapters.peft.src.peft.mapping import (  # noqa: E402
+    get_peft_model
+)
+
+from package_external.LLM_Adapters.peft.src.peft.utils import (  # noqa: E402
     get_peft_model_state_dict,
     prepare_model_for_int8_training,
-    set_peft_model_state_dict,
+    set_peft_model_state_dict
 )
+
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer, AutoModel  # noqa: F402
 
 
@@ -120,20 +126,28 @@ def train(
     if len(wandb_log_model) > 0:
         os.environ["WANDB_LOG_MODEL"] = wandb_log_model
 
-    if load_8bit:
-        model = AutoModelForCausalLM.from_pretrained(
+    # if load_8bit:
+    #     model = AutoModelForCausalLM.from_pretrained(
+    #         base_model,
+    #         load_in_8bit=load_8bit,
+    #         torch_dtype=torch.float16,
+    #         device_map=device_map,
+    #         trust_remote_code=True,
+    #     )
+    # else:
+    #     model = AutoModelForCausalLM.from_pretrained(
+    #         base_model,
+    #         load_in_8bit=False,
+    #         torch_dtype=torch.float16,
+    #         device_map={"": int(os.environ.get("LOCAL_RANK") or 0)},
+    #         trust_remote_code=True,
+    #     )
+
+    model = AutoModelForCausalLM.from_pretrained(
             base_model,
             load_in_8bit=load_8bit,
             torch_dtype=torch.float16,
-            device_map=device_map,
-            trust_remote_code=True,
-        )
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            base_model,
-            load_in_8bit=False,
-            torch_dtype=torch.float16,
-            device_map={"": int(os.environ.get("LOCAL_RANK") or 0)},
+            device_map="cpu",
             trust_remote_code=True,
         )
 
@@ -269,7 +283,7 @@ def train(
             warmup_steps=100,
             num_train_epochs=num_epochs,
             learning_rate=learning_rate,
-            fp16=True,
+            fp16=False,
             logging_steps=10,
             optim="adamw_torch",
             evaluation_strategy="steps" if val_set_size > 0 else "no",
