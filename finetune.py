@@ -12,23 +12,54 @@ Unused imports:
 import torch.nn as nn
 import bitsandbytes as bnb
 """
-from package_external.LLM_Adapters.peft.src.peft import (  # noqa: E402
-    LoraConfig,
-    BottleneckConfig
-)  
 
-from package_external.LLM_Adapters.peft.src.peft.mapping import (  # noqa: E402
-    get_peft_model
-)
+try:
+    from package_external.LLM_Adapters.peft.src.peft import (  # noqa: E402
+        LoraConfig,
+        BottleneckConfig
+    )  
 
-from package_external.LLM_Adapters.peft.src.peft.utils import (  # noqa: E402
-    get_peft_model_state_dict,
-    prepare_model_for_int8_training,
-    set_peft_model_state_dict
-)
+    from package_external.LLM_Adapters.peft.src.peft.mapping import (  # noqa: E402
+        get_peft_model
+    )
+
+    from package_external.LLM_Adapters.peft.src.peft.utils import (  # noqa: E402
+        get_peft_model_state_dict,
+        prepare_model_for_int8_training,
+        set_peft_model_state_dict
+    )
+
+except ImportError:
+    print("using imports for running finetune.py directly")
+    from peft.src.peft import (  # noqa: E402
+        LoraConfig,
+        BottleneckConfig
+    )  
+
+    from peft.src.peft.mapping import (  # noqa: E402
+        get_peft_model
+    )
+
+    from peft.src.peft.utils import (  # noqa: E402
+        get_peft_model_state_dict,
+        prepare_model_for_int8_training,
+        set_peft_model_state_dict
+    )
+
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer, AutoModel  # noqa: F402
 
+
+# Function to print GPU memory usage
+def print_gpu_memory_usage(device="cuda"):
+    allocated = torch.cuda.memory_allocated(device=device) / 1024 ** 3
+    max_allocated = torch.cuda.max_memory_allocated(device=device) / 1024 ** 3
+    cached = torch.cuda.memory_cached(device=device) / 1024 ** 3
+    max_cached = torch.cuda.max_memory_cached(device=device) / 1024 ** 3
+
+    print(f"GPU Memory Usage:\nAllocated: {allocated:.2f}GB / {max_allocated:.2f}GB")
+    print(f"Cached: {cached:.2f}GB / {max_cached:.2f}GB")
+    print("=" * 30)
 
 def train(
         # model/data params
@@ -70,6 +101,7 @@ def train(
         wandb_log_model: str = "",  # options: false | true
         resume_from_checkpoint: str = None,  # either training checkpoint or final adapter
 ):
+
     print(
         f"Finetuning model with params:\n"
         f"base_model: {base_model}\n"
@@ -126,31 +158,24 @@ def train(
     if len(wandb_log_model) > 0:
         os.environ["WANDB_LOG_MODEL"] = wandb_log_model
 
-    # if load_8bit:
-    #     model = AutoModelForCausalLM.from_pretrained(
-    #         base_model,
-    #         load_in_8bit=load_8bit,
-    #         torch_dtype=torch.float16,
-    #         device_map=device_map,
-    #         trust_remote_code=True,
-    #     )
-    # else:
-    #     model = AutoModelForCausalLM.from_pretrained(
-    #         base_model,
-    #         load_in_8bit=False,
-    #         torch_dtype=torch.float16,
-    #         device_map={"": int(os.environ.get("LOCAL_RANK") or 0)},
-    #         trust_remote_code=True,
-    #     )
-
-    model = AutoModelForCausalLM.from_pretrained(
+    if load_8bit:
+        model = AutoModelForCausalLM.from_pretrained(
             base_model,
             load_in_8bit=load_8bit,
             torch_dtype=torch.float16,
-            device_map="cpu",
+            device_map=device_map,
+            trust_remote_code=True,
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            base_model,
+            load_in_8bit=False,
+            torch_dtype=torch.float16,
+            device_map={"": int(os.environ.get("LOCAL_RANK") or 0)},
             trust_remote_code=True,
         )
 
+    
     if model.config.model_type == "llama":
         # Due to the name of transformers' LlamaTokenizer, we have to do this
         tokenizer = LlamaTokenizer.from_pretrained(base_model)
@@ -346,5 +371,6 @@ def generate_prompt(data_point):
                 {data_point["output"]}""" # noqa: E501
 
 
+
 if __name__ == "__main__":
-    fire.Fire(train)
+    train(base_model="yahma/llama-7b-hf", data_path="math_data.json", use_gradient_checkpointing=True, batch_size = 8)
