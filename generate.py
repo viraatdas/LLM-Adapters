@@ -4,9 +4,17 @@ import sys
 import gradio as gr
 import torch
 import transformers
-from package_external.LLM_Adapters.peft.src.peft import ( 
-    PeftModel
-)
+
+try:
+    from package_external.LLM_Adapters.peft.src.peft import ( 
+        PeftModel
+    )
+except ImportError:
+    print("using imports for running generate.py directly")
+    from peft.src.peft import (
+        PeftModel
+    )
+
 
 from transformers import GenerationConfig, LlamaForCausalLM, LlamaTokenizer
 
@@ -22,7 +30,7 @@ except:  # noqa: E722
     pass
 
 
-def main(
+def generate(
     load_8bit: bool = False,
     base_model: str = "",
     lora_weights: str = "tloen/alpaca-lora-7b",
@@ -188,3 +196,8 @@ def generate_prompt(instruction, input=None):
 ### Response:
 """  # noqa: E501
 
+
+if __name__ == "__main__":
+    generate(base_model="yahma/llama-7b-hf",
+         lora_weights="lora-alpaca",
+         share_gradio=True)

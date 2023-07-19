@@ -373,4 +373,9 @@ def generate_prompt(data_point):
 
 
 if __name__ == "__main__":
-    train(base_model="yahma/llama-7b-hf", data_path="math_data.json", use_gradient_checkpointing=True, batch_size = 8)
+    train(base_model="yahma/llama-7b-hf", 
+          data_path="math_data.json", 
+          use_gradient_checkpointing=True, 
+          batch_size = 8,
+          micro_batch_size=2,
+          num_epochs=1)
